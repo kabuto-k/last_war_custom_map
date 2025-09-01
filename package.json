@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "homepage": "https://kabuto-k.github.io/last_war_custom_map",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -15,6 +16,9 @@
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
+    "@types/react": "^19.1.12",
+    "@types/react-dom": "^19.1.9",
+    "@vitejs/plugin-react": "^5.0.2",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   }
