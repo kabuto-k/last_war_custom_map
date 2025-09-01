@@ -23,8 +23,6 @@ interface SidebarProps {
   clearAll: () => void;
   exportData: () => MapData;
   importData: (data: MapData) => void;
-  isOpen: boolean;
-  onClose: () => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = (props) => {
@@ -36,9 +34,7 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
     zoneName, setZoneName,
     clearAll,
     exportData,
-    importData,
-    isOpen,
-    onClose
+    importData
   } = props;
 
   const [newMemberName, setNewMemberName] = useState('');
@@ -113,89 +109,37 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
     setIsExporting(true);
     
     try {
-      // 複数の可能な要素IDを試す
-      const possibleIds = [
-        'map-canvas-for-export',
-        'map-content-for-export', 
-        'map-container',
-        'map-viewport',
-        'main-map'
-      ];
-      
-      let targetElement: HTMLElement | null = null;
-      
-      for (const id of possibleIds) {
-        targetElement = document.getElementById(id);
-        if (targetElement) {
-          console.log(`Found target element with ID: ${id}`);
-          break;
-        }
-      }
-      
-      // IDで見つからない場合は、クラス名やセレクタで検索
-      if (!targetElement) {
-        targetElement = document.querySelector('.map-container, [data-map-export], .map-canvas') as HTMLElement;
-      }
-      
-      if (!targetElement) {
-        alert('マップ要素が見つかりません。マップが表示されているか確認してください。\n探索したID: ' + possibleIds.join(', '));
-        console.error('Available elements:', document.querySelectorAll('[id*="map"], [class*="map"]'));
+      // 対象要素の取得と存在確認
+      const mapElement = document.getElementById('map-content-for-export');
+      if (!mapElement) {
+        alert('マップ要素が見つかりません。マップが表示されているか確認してください。');
         return;
       }
 
-      console.log('画像出力を開始します...', targetElement);
-
-      // 元のスタイルを保存
-      const originalStyles = {
-        transform: targetElement.style.transform,
-        overflow: targetElement.style.overflow,
-        position: targetElement.style.position,
-        width: targetElement.style.width,
-        height: targetElement.style.height
-      };
-
-      // 親要素のスタイルも確認
-      const parentElement = targetElement.parentElement;
-      const originalParentOverflow = parentElement?.style.overflow || '';
-
-      // 出力用にスタイルを一時的に変更
-      targetElement.style.transform = 'translate(0px, 0px) scale(1)';
-      targetElement.style.position = 'static';
-      targetElement.style.overflow = 'visible';
-      if (parentElement) {
-        parentElement.style.overflow = 'visible';
-      }
-
-      // 少し待機してからキャプチャ
-      await new Promise(resolve => setTimeout(resolve, 100));
+      console.log('画像出力を開始します...');
 
       // html2canvasのオプション設定
-      const canvas = await html2canvas(targetElement, {
+      const canvas = await html2canvas(mapElement, {
         useCORS: true,
         allowTaint: true,
         backgroundColor: '#1f2937',
         scale: 2, // 高解像度化
-        width: targetElement.scrollWidth || targetElement.offsetWidth,
-        height: targetElement.scrollHeight || targetElement.offsetHeight,
-        x: 0,
-        y: 0,
+        width: mapElement.scrollWidth,
+        height: mapElement.scrollHeight,
         scrollX: 0,
         scrollY: 0,
-        windowWidth: window.innerWidth,
-        windowHeight: window.innerHeight,
+        windowWidth: mapElement.scrollWidth,
+        windowHeight: mapElement.scrollHeight,
         ignoreElements: (element: Element) => {
-          // サイドバーや不要な要素を除外
-          return element.classList.contains('ignore-export') || 
-                 element.tagName === 'ASIDE' ||
-                 element.classList.contains('sidebar');
+          // 不要な要素を除外（例：スクロールバーなど）
+          return element.classList.contains('ignore-export');
         },
         onclone: (clonedDoc: Document) => {
-          // クローンされたドキュメントでの追加調整
-          const clonedElement = clonedDoc.querySelector('[id*="map"]') as HTMLElement;
+          // クローンされたドキュメントでのスタイル調整
+          const clonedElement = clonedDoc.getElementById('map-content-for-export');
           if (clonedElement) {
             clonedElement.style.transform = 'none';
             clonedElement.style.position = 'static';
-            clonedElement.style.overflow = 'visible';
           }
         }
       });
@@ -206,7 +150,7 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
 
       console.log('キャンバス生成完了、ダウンロードを開始します...');
 
-      // ファイル名の生成
+      // ファイル名の生成（日時を含む）
       const now = new Date();
       const timestamp = now.toISOString().slice(0, 19).replace(/[T:]/g, '-');
       const fileName = `${allianceName || 'map'}-${zoneName || 'zone'}-${timestamp}.png`;
@@ -214,7 +158,10 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
       // ダウンロード処理
       const link = document.createElement('a');
       link.download = fileName;
-      link.href = canvas.toDataURL('image/png', 1.0);
+      
+      // 高品質なPNG形式で出力
+      const dataURL = canvas.toDataURL('image/png', 1.0);
+      link.href = dataURL;
       
       // ダウンロード実行
       document.body.appendChild(link);
@@ -222,18 +169,10 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
       document.body.removeChild(link);
 
       console.log('画像出力が完了しました。');
-
-      // 元のスタイルを復元
-      Object.keys(originalStyles).forEach(key => {
-        (targetElement.style as any)[key] = (originalStyles as any)[key];
-      });
-      if (parentElement) {
-        parentElement.style.overflow = originalParentOverflow;
-      }
       
     } catch (error) {
       console.error('画像出力エラー:', error);
-      alert(`画像出力に失敗しました: ${error instanceof Error ? error.message : '不明なエラー'}\n\nデベロッパーツールのコンソールで詳細を確認してください。`);
+      alert(`画像出力に失敗しました: ${error instanceof Error ? error.message : '不明なエラー'}`);
     } finally {
       setIsExporting(false);
     }
@@ -285,14 +224,8 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
   const placedMemberIds = new Set(bases.map(base => base.member.id));
 
   return (
-    <aside className={`w-80 bg-gray-900/80 backdrop-blur-md border-r border-gray-700 p-4 flex flex-col shadow-2xl z-30 transform transition-transform duration-300 ease-in-out fixed inset-y-0 left-0 lg:relative lg:flex-shrink-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
+    <aside className="w-80 bg-gray-900/50 border-r border-gray-700 p-4 flex flex-col shadow-2xl z-10">
       <div className="flex-1 overflow-y-auto pr-2 space-y-6">
-        <div className="flex justify-between items-center mb-4 lg:hidden">
-            <h2 className="text-lg font-semibold text-cyan-400">メニュー</h2>
-            <button onClick={onClose} className="text-gray-400 hover:text-white" aria-label="メニューを閉じる">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-            </button>
-        </div>
         
         <div>
           <h2 className="text-lg font-semibold text-cyan-400 mb-3">マップ設定</h2>
@@ -311,7 +244,7 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
                       <input type="number" name="minX" value={gridDimensions.minX} onChange={handleGridDimChange} placeholder="Min X" className={smallInputClass} />
                       <input type="number" name="maxX" value={gridDimensions.maxX} onChange={handleGridDimChange} placeholder="Max X" className={smallInputClass} />
                       <input type="number" name="minY" value={gridDimensions.minY} onChange={handleGridDimChange} placeholder="Min Y" className={smallInputClass} />
-                      <input type="number" name="maxY" value={gridDimensions.maxY} onChange={handleGridDimensions} placeholder="Max Y" className={smallInputClass} />
+                      <input type="number" name="maxY" value={gridDimensions.maxY} onChange={handleGridDimChange} placeholder="Max Y" className={smallInputClass} />
                   </div>
               </div>
           </div>
