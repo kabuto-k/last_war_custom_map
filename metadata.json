@@ -1,0 +1,5 @@
+{
+  "name": "Last War Alliance Map Tool",
+  "description": "An application for players of the game 'Last War' to create and share member placement maps using a graphical user interface. Users can drag and drop members onto a coordinate grid, place markers, and export the final map as an image.",
+  "requestFramePermissions": []
+}
