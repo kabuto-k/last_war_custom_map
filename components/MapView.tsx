@@ -86,8 +86,9 @@ const MapView: React.FC<MapViewProps> = (props) => {
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
 
-    const colIndex = Math.floor(mouseX / scale);
-    const rowIndex = Math.floor(mouseY / scale);
+    // Corrected calculation for drop coordinates by factoring in both scale and cell size
+    const colIndex = Math.floor(mouseX / (CELL_SIZE_PX * scale));
+    const rowIndex = Math.floor(mouseY / (CELL_SIZE_PX * scale));
 
     const x = minX + colIndex;
     const y = maxY - rowIndex;
