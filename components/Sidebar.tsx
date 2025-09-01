@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import html2canvas from 'html2canvas';
 import type { Member, GridDimensions, ZoneTemplate, Base, MapData } from '../types';
 import MemberItem from './MemberItem';
 import ZoneTemplateItem from './ZoneTemplateItem';
@@ -37,6 +38,7 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
   } = props;
 
   const [newMemberName, setNewMemberName] = useState('');
+  const [isExporting, setIsExporting] = useState(false);
   
   // Marker state
   const [markerLabel, setMarkerLabel] = useState('');
@@ -52,7 +54,6 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
   const [zoneHeight, setZoneHeight] = useState('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-
 
   const handleAddMember = (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,22 +104,77 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
     setZoneHeight('');
   };
 
+  // 改善された画像出力関数
+  const handleExportImage = async () => {
+    setIsExporting(true);
+    
+    try {
+      // 対象要素の取得と存在確認
+      const mapElement = document.getElementById('map-content-for-export');
+      if (!mapElement) {
+        alert('マップ要素が見つかりません。マップが表示されているか確認してください。');
+        return;
+      }
 
-  const handleExportImage = () => {
-    const mapElement = document.getElementById('map-content-for-export');
-    if (mapElement && (window as any).html2canvas) {
-      (window as any).html2canvas(mapElement, { 
+      console.log('画像出力を開始します...');
+
+      // html2canvasのオプション設定
+      const canvas = await html2canvas(mapElement, {
         useCORS: true,
+        allowTaint: true,
         backgroundColor: '#1f2937',
-        scale: 1.5 // Increase resolution
-      }).then((canvas: HTMLCanvasElement) => {
-        const link = document.createElement('a');
-        link.download = `${allianceName}-${zoneName}-map.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
+        scale: 2, // 高解像度化
+        width: mapElement.scrollWidth,
+        height: mapElement.scrollHeight,
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: mapElement.scrollWidth,
+        windowHeight: mapElement.scrollHeight,
+        ignoreElements: (element: Element) => {
+          // 不要な要素を除外（例：スクロールバーなど）
+          return element.classList.contains('ignore-export');
+        },
+        onclone: (clonedDoc: Document) => {
+          // クローンされたドキュメントでのスタイル調整
+          const clonedElement = clonedDoc.getElementById('map-content-for-export');
+          if (clonedElement) {
+            clonedElement.style.transform = 'none';
+            clonedElement.style.position = 'static';
+          }
+        }
       });
-    } else {
-      console.error('Map element not found or html2canvas not loaded.');
+
+      if (!canvas) {
+        throw new Error('キャンバスの生成に失敗しました。');
+      }
+
+      console.log('キャンバス生成完了、ダウンロードを開始します...');
+
+      // ファイル名の生成（日時を含む）
+      const now = new Date();
+      const timestamp = now.toISOString().slice(0, 19).replace(/[T:]/g, '-');
+      const fileName = `${allianceName || 'map'}-${zoneName || 'zone'}-${timestamp}.png`;
+
+      // ダウンロード処理
+      const link = document.createElement('a');
+      link.download = fileName;
+      
+      // 高品質なPNG形式で出力
+      const dataURL = canvas.toDataURL('image/png', 1.0);
+      link.href = dataURL;
+      
+      // ダウンロード実行
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      console.log('画像出力が完了しました。');
+      
+    } catch (error) {
+      console.error('画像出力エラー:', error);
+      alert(`画像出力に失敗しました: ${error instanceof Error ? error.message : '不明なエラー'}`);
+    } finally {
+      setIsExporting(false);
     }
   };
   
@@ -263,7 +319,17 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
           <button onClick={handleSaveData} className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded transition-colors">データを保存</button>
           <button onClick={handleLoadDataClick} className="w-full bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded transition-colors">データを読込</button>
         </div>
-        <button onClick={handleExportImage} className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded transition-colors">画像として出力</button>
+        <button 
+          onClick={handleExportImage} 
+          disabled={isExporting}
+          className={`w-full font-bold py-2 px-4 rounded transition-colors ${
+            isExporting 
+              ? 'bg-gray-500 cursor-not-allowed' 
+              : 'bg-green-600 hover:bg-green-500'
+          } text-white`}
+        >
+          {isExporting ? '出力中...' : '画像として出力'}
+        </button>
         <button onClick={clearAll} className="w-full bg-red-700 hover:bg-red-600 text-white font-bold py-2 px-4 rounded transition-colors">配置クリア</button>
       </div>
     </aside>
