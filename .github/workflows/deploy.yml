@@ -1,42 +1,18 @@
-# ワークフローの名前
 name: Deploy React App to GitHub Pages
 
-# ワークフローをトリガーするイベント
 on:
-  push:
-    branches:
-      - main
+  workflow_run:
+    workflows: ["Build React App"]  # 上のworkflow名と一致させる
+    types:
+      - completed
 
-# 💡 ここにpermissionsキーを追加します
 permissions:
-  contents: read # リポジトリの内容を読み取る権限
-  pages: write # GitHub Pagesにデプロイする権限
-  id-token: write # デプロイ用のIDトークンを発行する権限
+  pages: write
+  id-token: write
 
-# 実行するジョブ
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Build React app
-        run: npm run build
-      
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: './dist'
-          
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v3
+      - uses: actions/deploy-pages@v3
