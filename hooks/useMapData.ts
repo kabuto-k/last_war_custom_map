@@ -1,6 +1,6 @@
 // FIX: Import Dispatch and SetStateAction for correct state setter typing.
 import { useState, useEffect, useCallback, Dispatch, SetStateAction } from 'react';
-import type { Member, Base, Marker, ZoneTemplate, PlacedZone, GridDimensions, Coordinates } from '../types';
+import type { Member, Base, Marker, ZoneTemplate, PlacedZone, GridDimensions, Coordinates, MapData } from '../types';
 
 // Generic hook for persisting state to localStorage
 // FIX: Correctly type the state setter to allow functional updates.
@@ -133,6 +133,48 @@ const useMapData = () => {
     }
   }, [setBases, setMarkers, setPlacedZones]);
 
+  const exportData = useCallback((): MapData => {
+    return {
+      members,
+      bases,
+      markers,
+      zoneTemplates,
+      placedZones,
+      gridDimensions,
+      allianceName,
+      zoneName,
+    };
+  }, [members, bases, markers, zoneTemplates, placedZones, gridDimensions, allianceName, zoneName]);
+
+  const importData = useCallback((data: MapData) => {
+    // Basic validation
+    if (
+      !data || 
+      !Array.isArray(data.members) ||
+      !Array.isArray(data.bases) ||
+      !data.gridDimensions
+    ) {
+      alert('無効なデータファイルです。');
+      return;
+    }
+    
+    if (window.confirm('現在の配置を読み込んだデータで上書きします。よろしいですか？')) {
+      setMembers(data.members);
+      setBases(data.bases);
+      setMarkers(data.markers || []);
+      setZoneTemplates(data.zoneTemplates || []);
+      setPlacedZones(data.placedZones || []);
+      setGridDimensions(data.gridDimensions);
+      setAllianceName(data.allianceName || 'ラストウォー');
+      setZoneName(data.zoneName || '戦域');
+    }
+  }, [
+    setMembers, setBases, setMarkers, 
+    setZoneTemplates, setPlacedZones, 
+    setGridDimensions, setAllianceName, setZoneName
+  ]);
+
+
   return {
     members, addMember, removeMember, updateMemberRole,
     bases, placeBase, removeBase, moveBase,
@@ -142,7 +184,9 @@ const useMapData = () => {
     gridDimensions, setGridDimensions,
     allianceName, setAllianceName,
     zoneName, setZoneName,
-    clearAll
+    clearAll,
+    exportData,
+    importData,
   };
 };
 

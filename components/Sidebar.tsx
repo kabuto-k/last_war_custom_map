@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
-import html2canvas from 'html2canvas'; // この行を追加
-import type { Member, GridDimensions, ZoneTemplate, Base } from '../types';
+import React, { useState, useRef } from 'react';
+import type { Member, GridDimensions, ZoneTemplate, Base, MapData } from '../types';
 import MemberItem from './MemberItem';
 import ZoneTemplateItem from './ZoneTemplateItem';
 
@@ -21,6 +20,8 @@ interface SidebarProps {
   zoneName: string;
   setZoneName: (name: string) => void;
   clearAll: () => void;
+  exportData: () => MapData;
+  importData: (data: MapData) => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = (props) => {
@@ -30,7 +31,9 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
     gridDimensions, setGridDimensions,
     allianceName, setAllianceName,
     zoneName, setZoneName,
-    clearAll 
+    clearAll,
+    exportData,
+    importData
   } = props;
 
   const [newMemberName, setNewMemberName] = useState('');
@@ -47,6 +50,8 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
   const [zoneBgColor, setZoneBgColor] = useState('rgba(249, 115, 22, 0.2)');
   const [zoneWidth, setZoneWidth] = useState('');
   const [zoneHeight, setZoneHeight] = useState('');
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
 
   const handleAddMember = (e: React.FormEvent) => {
@@ -98,28 +103,65 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
     setZoneHeight('');
   };
 
-  // handleExportも修正
-  const handleExport = async () => {
+
+  const handleExportImage = () => {
     const mapElement = document.getElementById('map-content-for-export');
-    if (mapElement) {
-      try {
-        const canvas = await html2canvas(mapElement, { 
-          useCORS: true,
-          backgroundColor: '#1f2937',
-          scale: 1.5 // Increase resolution
-        });
+    if (mapElement && (window as any).html2canvas) {
+      (window as any).html2canvas(mapElement, { 
+        useCORS: true,
+        backgroundColor: '#1f2937',
+        scale: 1.5 // Increase resolution
+      }).then((canvas: HTMLCanvasElement) => {
         const link = document.createElement('a');
         link.download = `${allianceName}-${zoneName}-map.png`;
         link.href = canvas.toDataURL('image/png');
         link.click();
-      } catch (error) {
-        console.error('Canvas generation failed:', error);
-      }
+      });
     } else {
-      console.error('Map element not found.');
+      console.error('Map element not found or html2canvas not loaded.');
     }
   };
   
+  const handleSaveData = () => {
+    const data = exportData();
+    const jsonString = JSON.stringify(data, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'lastwar-map-data.json';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleLoadDataClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const text = e.target?.result;
+        if (typeof text === 'string') {
+          const data = JSON.parse(text);
+          importData(data);
+        }
+      } catch (error) {
+        console.error('Error parsing JSON file:', error);
+        alert('ファイルの読み込みに失敗しました。有効なJSONファイルではありません。');
+      }
+    };
+    reader.readAsText(file);
+    // Reset file input to allow loading the same file again
+    event.target.value = '';
+  };
+
   const smallInputClass = "w-full bg-gray-700 text-sm p-1 rounded border border-gray-600 focus:outline-none focus:ring-2 focus:ring-cyan-500";
   const smallLabelClass = "text-xs text-gray-400";
   
@@ -216,7 +258,12 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
       </div>
 
       <div className="flex-shrink-0 pt-4 border-t border-gray-700 space-y-2">
-        <button onClick={handleExport} className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded transition-colors">画像として出力</button>
+        <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".json" className="hidden" />
+        <div className="grid grid-cols-2 gap-2">
+          <button onClick={handleSaveData} className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded transition-colors">データを保存</button>
+          <button onClick={handleLoadDataClick} className="w-full bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded transition-colors">データを読込</button>
+        </div>
+        <button onClick={handleExportImage} className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded transition-colors">画像として出力</button>
         <button onClick={clearAll} className="w-full bg-red-700 hover:bg-red-600 text-white font-bold py-2 px-4 rounded transition-colors">配置クリア</button>
       </div>
     </aside>

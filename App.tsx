@@ -15,6 +15,8 @@ const App: React.FC = () => {
     allianceName, setAllianceName,
     zoneName, setZoneName,
     clearAll,
+    exportData,
+    importData
   } = useMapData();
 
   const [visibleCoords, setVisibleCoords] = useState('');
@@ -42,6 +44,8 @@ const App: React.FC = () => {
         zoneName={zoneName}
         setZoneName={setZoneName}
         clearAll={clearAll}
+        exportData={exportData}
+        importData={importData}
       />
       <main className="flex-1 flex flex-col bg-gray-800">
         <header className="bg-gray-900/80 backdrop-blur-sm p-3 text-center border-b border-gray-700 shadow-lg z-20">

@@ -54,3 +54,15 @@ export enum ItemType {
   ZONE_TEMPLATE = 'ZONE_TEMPLATE',
   PLACED_ZONE = 'PLACED_ZONE',
 }
+
+// Represents the entire state of the map for saving and loading
+export interface MapData {
+  members: Member[];
+  bases: Base[];
+  markers: Marker[];
+  zoneTemplates: ZoneTemplate[];
+  placedZones: PlacedZone[];
+  gridDimensions: GridDimensions;
+  allianceName: string;
+  zoneName: string;
+}
