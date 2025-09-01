@@ -42,7 +42,7 @@ jobs:
         with:
           # ビルド成果物のあるディレクトリを指定
           # Reactは通常 'build' ディレクトリに生成します
-          path: './build'
+          path: './dist'
           
       # 6. GitHub Pagesへのデプロイ
       - name: Deploy to GitHub Pages
