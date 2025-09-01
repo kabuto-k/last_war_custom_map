@@ -1,0 +1,50 @@
+# ワークフローの名前
+name: Deploy React App to GitHub Pages
+
+# ワークフローをトリガーするイベント
+# mainブランチにプッシュされたときに実行
+on:
+  push:
+    branches:
+      - main
+
+# 実行するジョブ
+jobs:
+  # ジョブ名: ビルドとデプロイ
+  build-and-deploy:
+    # 実行するOSの環境
+    runs-on: ubuntu-latest
+    
+    # ジョブのステップ
+    steps:
+      # 1. リポジトリのコードをチェックアウト
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      # 2. Node.js環境のセットアップ
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # 使用するNode.jsのバージョンを指定
+
+      # 3. 依存関係のインストール
+      - name: Install dependencies
+        run: npm install
+
+      # 4. アプリケーションのビルド
+      - name: Build React app
+        run: npm run build
+      
+      # 5. ビルド成果物のアップロード
+      # このステップはGitHub Pagesへのデプロイ準備に必要です
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # ビルド成果物のあるディレクトリを指定
+          # Reactは通常 'build' ディレクトリに生成します
+          path: './build'
+          
+      # 6. GitHub Pagesへのデプロイ
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v3
