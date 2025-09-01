@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { Member, GridDimensions, ZoneTemplate, Base } from '../types';
 import MemberItem from './MemberItem';
 import ZoneTemplateItem from './ZoneTemplateItem';
+import html2canvas from 'html2canvas'; // この行を追加
 
 interface SidebarProps {
   members: Member[];
