@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
+import html2canvas from 'html2canvas'; // この行を追加
 import type { Member, GridDimensions, ZoneTemplate, Base } from '../types';
 import MemberItem from './MemberItem';
 import ZoneTemplateItem from './ZoneTemplateItem';
-import html2canvas from 'html2canvas'; // この行を追加
 
 interface SidebarProps {
   members: Member[];
@@ -98,22 +98,25 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
     setZoneHeight('');
   };
 
-
-  const handleExport = () => {
+  // handleExportも修正
+  const handleExport = async () => {
     const mapElement = document.getElementById('map-content-for-export');
-    if (mapElement && (window as any).html2canvas) {
-      (window as any).html2canvas(mapElement, { 
-        useCORS: true,
-        backgroundColor: '#1f2937',
-        scale: 1.5 // Increase resolution
-      }).then((canvas: HTMLCanvasElement) => {
+    if (mapElement) {
+      try {
+        const canvas = await html2canvas(mapElement, { 
+          useCORS: true,
+          backgroundColor: '#1f2937',
+          scale: 1.5 // Increase resolution
+        });
         const link = document.createElement('a');
         link.download = `${allianceName}-${zoneName}-map.png`;
         link.href = canvas.toDataURL('image/png');
         link.click();
-      });
+      } catch (error) {
+        console.error('Canvas generation failed:', error);
+      }
     } else {
-      console.error('Map element not found or html2canvas not loaded.');
+      console.error('Map element not found.');
     }
   };
   
