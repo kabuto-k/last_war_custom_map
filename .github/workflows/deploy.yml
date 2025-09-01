@@ -2,9 +2,8 @@ name: Deploy React App to GitHub Pages
 
 on:
   workflow_run:
-    workflows: ["Build React App"]  # 上のworkflow名と一致させる
-    types:
-      - completed
+    workflows: ["Build React App"]   # build.yml の name と一致させる
+    types: [completed]
 
 permissions:
   pages: write
